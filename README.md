@@ -5,3 +5,5 @@ It uses on-board serial and does NOT use software serial.
 https://www.dfrobot.com/product-2340.html
 https://www.dfrobot.com/product-2339.html
 
+Create a new folder in your arduino libraries folder and put WindFunctions.cpp and WindFunctions.h into it. 
+This library is called from the main program the normal way.
