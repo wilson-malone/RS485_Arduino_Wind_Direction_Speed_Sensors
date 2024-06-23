@@ -4,13 +4,14 @@
 
 
 
-//Read the wind speed from serial. Must input an address
+//Control RS485 wind direction and speed sensors with arduino.
 class WindFunctions{
 	public:
 	//Variables
 
 	int16_t WindDirection;
 	int16_t WindSpeed;
+	uint8_t ReadAddr;
 	
 	//Functions
 
@@ -19,7 +20,9 @@ class WindFunctions{
 	//Read Wind Direction as 16 directions
 	int16_t readWindDirection16(uint8_t B_Address);
 	//Read Wind direction as 360 degrees, but you must divide by 10 to get the right number.
-        int16_t readWindDirection360(uint8_t B_Address); 
+        int16_t readWindDirection360(uint8_t B_Address);
+	//Read the address of the currently connected device.
+        uint8_t readAddress();
 	//modifies the address of the connected unit. Only one at a time. Restart when done.
 	boolean ModifyAddress(uint8_t Address1, uint8_t Address2); 
 
