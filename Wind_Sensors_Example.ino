@@ -19,8 +19,9 @@ void loop() {
   
   //direction = wind_functions.readWindDirection16(0x02)/10; //Returns wind direction as 360 degrees
   
-  //wind_functions.ModifyAddress(0x00, 0x05) // modify the address of the connected unit. Only do one at a time. Power off and on.
+  //wind_functions.ModifyAddress(0x00, 0x05); // modify the address of the connected unit. Only do one at a time. Power off and on.
 
+  //wind_functions.readAddress(); //Read the address of the currently connected device
 
 
   Serial.println(speed);
