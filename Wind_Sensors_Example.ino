@@ -15,7 +15,11 @@ void loop() {
   
   speed = wind_functions.readWindSpeed(0x03);  // Read in meters/sec
 
-  direction = wind_functions.readWindDirection(0x02); //Returns wind direction as an 8 bit variable of 17 directions. North gets transmitted both as 0x00 and 0x11. I have no idea why.
+  direction = wind_functions.readWindDirection16(0x02); //Returns wind direction as an 8 bit variable of 17 directions. North gets transmitted both as 0x00 and 0x10.
+  
+  //direction = wind_functions.readWindDirection16(0x02)/10; //Returns wind direction as 360 degrees
+  
+  //wind_functions.ModifyAddress(0x00, 0x05) // modify the address of the connected unit. Only do one at a time. Power off and on.
 
 
 
