@@ -13,8 +13,9 @@ class WindFunctions{
 	
 	//Functions
 	int16_t readWindSpeed(uint8_t A_Address);
-	int16_t readWindDirection(uint8_t B_Address);
-	boolean ModifyAddress(uint8_t Address1, uint8_t Address2);
+	int16_t readWindDirection16(uint8_t B_Address); //16 directions
+        int16_t readWindDirection360(uint8_t B_Address) //360 degrees, but you must divide by 10 to get the right number.
+	boolean ModifyAddress(uint8_t Address1, uint8_t Address2); //modifies the address of the connected unit. Only one at a time. Restart when done.
 
 
 	
