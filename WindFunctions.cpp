@@ -223,6 +223,53 @@ if (millis() - curr1 > 100) {
 return WindDirection;
 }
 
+uint8_t WindFunctions::readAddress()
+{
+   uint8_t Data[7] = {0}; //Store the original data packet returned by the sensor
+   uint8_t COM[8] = {0x00, 0x03, 0x10, 0x00, 0x00, 0x01, 0x00, 0x00}; //Command for reading wind speed
+   boolean ret = false; //Wind speed acquisition success flag
+   long curr = millis();
+   long curr1 = curr;
+   uint8_t ch = 0;
+   addedCRC(COM , 6); //Add CRC_16 check
+   Serial.write(COM, 8); //Send the command of reading the address
+ 
+   while (!ret) {
+     if (millis() - curr > 1000) {
+       Serial.println("Address Read Failed");
+       break;
+     }
+ 
+if (millis() - curr1 > 100) {
+       Serial.write(COM, 8); //If the last command is sent for more than 100 milliseconds and the return has not been received, the command will be re-sent
+       curr1 = millis();
+     }
+ 
+     if (readN(&ch, 1) == 1) {
+       if (ch == 0x00) { //Read and judge the packet header.
+         Data[0] = ch;
+         if (readN(&ch, 1) == 1) {
+           if (ch == 0x03) { //Read and judge the packet header.
+             Data[1] = ch;
+             if (readN(&ch, 1) == 1) {
+               if (ch == 0x02) { //Read and judge the packet header.
+                 Data[2] = ch;
+                 if (readN(&Data[3], 4) == 4) {
+                   if (CRC16_2(Data, 5) == (Data[5] * 256 + Data[6])) { //Check data packet
+                     ret = true;
+                     ReadAddr = Data[4]; 
+                   }
+                 }
+               }
+             }
+           }
+         }
+       }
+     }
+   }
+   
+return ReadAddr;
+}
 
  //To modify the sensor address, make sure only one device is powered on and connected. This uses the 0x00 broadcast address.
  //Address1: 	The address of the device before modification.
