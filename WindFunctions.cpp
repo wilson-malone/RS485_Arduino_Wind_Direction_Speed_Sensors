@@ -125,7 +125,7 @@ if (millis() - curr1 > 100) {
 return WindSpeed;
 }
  
-int16_t WindFunctions::readWindDirection(uint8_t B_Address)
+int16_t WindFunctions::readWindDirection16(uint8_t B_Address)
 {
    uint8_t Data[7] = {0}; //Store the original data packet returned by the sensor
    uint8_t COM[8] = {0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00}; // Command of reading wind direction
@@ -173,6 +173,56 @@ if (millis() - curr1 > 100) {
    
 return WindDirection;
 }
+
+int16_t WindFunctions::readWindDirection360(uint8_t B_Address)
+{
+   uint8_t Data[7] = {0}; //Store the original data packet returned by the sensor
+   uint8_t COM[8] = {0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00}; // Command of reading wind direction
+   boolean ret = false; //Wind direction acquisition success flag
+   long curr = millis();
+   long curr1 = curr;
+   uint8_t ch = 0;
+   COM[0] = B_Address; //Add the complete command package with reference to the communication protocol.
+   addedCRC(COM , 6); //Add CRC_16 check for reading wind direction command packet
+   Serial.write(COM, 8); //Send the command of reading the wind direction
+ 
+   while (!ret) {
+     if (millis() - curr > 1000) {
+       WindDirection = 18; //If the wind direction has not been read for more than 1000 milliseconds, it will be regarded as a timeout and return 18.
+       break;
+     }
+ 
+if (millis() - curr1 > 100) {
+       Serial.write(COM, 8); //If the last command to read the wind direction is sent for more than 100 milliseconds and nothing has been returned, the command to read the wind direction will be re-sent
+       curr1 = millis();
+     }
+ 
+     if (readN(&ch, 1) == 1) {
+       if (ch == B_Address) { //Read and judge the packet header.
+         Data[0] = ch;
+         if (readN(&ch, 1) == 1) {
+           if (ch == 0x03) { //Read and judge the packet header.
+             Data[1] = ch;
+             if (readN(&ch, 1) == 1) {
+               if (ch == 0x02) { //Read and judge the packet header.
+                 Data[2] = ch;
+                 if (readN(&Data[3], 4) == 4) {
+                   if (CRC16_2(Data, 5) == (Data[5] * 256 + Data[6])) { //Check data packet
+                     ret = true;
+                     WindDirection = Data[3]*256 + Data[4]; //Calculate the wind direction by dividing by 10.
+                   }
+                 }
+               }
+             }
+           }
+         }
+       }
+     }
+   }
+   
+return WindDirection;
+}
+
 
  //To modify the sensor address, make sure only one device is powered on and connected. This uses the 0x00 broadcast address.
  //Address1: 	The address of the device before modification.
