@@ -5,20 +5,23 @@
  
 size_t WindFunctions::readN(uint8_t *buf, size_t len)
 {
-   size_t offset = 0, left = len;
-   uint8_t *buffer = buf;
-   long curr = millis();
-   while (left) {
-     if (Serial.available()) {
-       buffer[offset] = Serial.read();
-       offset++;
-       left--;
-     }
-     if (millis() - curr > 100) {
-       break;
-     }
-   }
-   return offset;
+    size_t offset = 0;
+    long start_time = millis();  // Start time for timeout check
+    
+    // Wait until enough data is available, with a timeout check
+    while (Serial.available() < len) {
+        if (millis() - start_time > 100) {  // 100ms timeout (adjust as needed)
+            break;  // Exit if data isn't received within the timeout
+        }
+    }
+    
+    // Read all available bytes (up to len)
+    while (offset < len && Serial.available()) {
+        buf[offset] = Serial.read();
+        offset++;
+    }
+
+    return offset;  // Return the number of bytes successfully read
 }
  
  
@@ -81,23 +84,20 @@ int16_t WindFunctions::readWindSpeed(uint8_t A_Address)
    uint8_t Data[7] = {0}; //Store the original data packet returned by the sensor
    uint8_t COM[8] = {0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00}; //Command for reading wind speed
    boolean ret = false; //Wind speed acquisition success flag
-   long curr = millis();
-   long curr1 = curr;
    uint8_t ch = 0;
    COM[0] = A_Address; //Add the complete command package with reference to the communication protocol.
    addedCRC(COM , 6); //Add CRC_16 check for reading wind speed command packet
-   Serial.write(COM, 8); //Send the command of reading the wind speed
+   int retries=0;
  
    while (!ret) {
-     if (millis() - curr > 1000) {
-       WindSpeed = -5; //If the wind speed has not been read for more than 1000 milliseconds, it will be regarded as a timeout and return -1.
+     if (retries>2) {
+       WindSpeed = -1; //If the wind speed has not been read for more than 1000 milliseconds, it will be regarded as a timeout and return -1.
        break;
      }
- 
-if (millis() - curr1 > 100) {
-       Serial.write(COM, 8); //If the last command to read the wind speed is sent for more than 100 milliseconds and the return command has not been received, the command to read the wind speed will be re-sent
-       curr1 = millis();
-     }
+
+	Serial.write(COM, 8); //Send the command of reading the wind speed
+	Serial.flush();
+ 	retries++;
  
      if (readN(&ch, 1) == 1) {
        if (ch == A_Address) { //Read and judge the packet header.
@@ -109,9 +109,9 @@ if (millis() - curr1 > 100) {
                if (ch == 0x02) { //Read and judge the packet header.
                  Data[2] = ch;
                  if (readN(&Data[3], 4) == 4) {
-                   if (CRC16_2(Data, 5) == (Data[5] * 256 + Data[6])) { //Check data packet
+                   if (CRC16_2(Data, 5) == ((Data[5] << 8) | Data[6])) { //Check data packet
+					 WindSpeed = ((Data[3] << 8) | Data[4]); //Calculate the wind speed
                      ret = true;
-                     WindSpeed = (Data[3] * 256 + Data[4]); //Calculate the wind speed
                    }
                  }
                }
@@ -130,23 +130,20 @@ int16_t WindFunctions::readWindDirection16(uint8_t B_Address)
    uint8_t Data[7] = {0}; //Store the original data packet returned by the sensor
    uint8_t COM[8] = {0x00, 0x03, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00}; // Command of reading wind direction
    boolean ret = false; //Wind direction acquisition success flag
-   long curr = millis();
-   long curr1 = curr;
    uint8_t ch = 0;
    COM[0] = B_Address; //Add the complete command package with reference to the communication protocol.
    addedCRC(COM , 6); //Add CRC_16 check for reading wind direction command packet
-   Serial.write(COM, 8); //Send the command of reading the wind direction
+   int retries = 0;
  
    while (!ret) {
-     if (millis() - curr > 1000) {
+     if (retries>2) {
        WindDirection = 18; //If the wind direction has not been read for more than 1000 milliseconds, it will be regarded as a timeout and return 18.
        break;
      }
- 
-if (millis() - curr1 > 100) {
-       Serial.write(COM, 8); //If the last command to read the wind direction is sent for more than 100 milliseconds and nothing has been returned, the command to read the wind direction will be re-sent
-       curr1 = millis();
-     }
+
+	 Serial.write(COM, 8); //Send the command of reading the wind speed
+	 Serial.flush();
+	 retries++;
  
      if (readN(&ch, 1) == 1) {
        if (ch == B_Address) { //Read and judge the packet header.
@@ -158,7 +155,7 @@ if (millis() - curr1 > 100) {
                if (ch == 0x02) { //Read and judge the packet header.
                  Data[2] = ch;
                  if (readN(&Data[3], 4) == 4) {
-                   if (CRC16_2(Data, 5) == (Data[5] * 256 + Data[6])) { //Check data packet
+                   if (CRC16_2(Data, 5) == ((Data[5] << 8) | Data[6])) { //Check data packet
                      ret = true;
                      WindDirection = Data[4]; //Calculate the wind direction
                    }
@@ -179,23 +176,20 @@ int16_t WindFunctions::readWindDirection360(uint8_t B_Address)
    uint8_t Data[7] = {0}; //Store the original data packet returned by the sensor
    uint8_t COM[8] = {0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00}; // Command of reading wind direction
    boolean ret = false; //Wind direction acquisition success flag
-   long curr = millis();
-   long curr1 = curr;
    uint8_t ch = 0;
    COM[0] = B_Address; //Add the complete command package with reference to the communication protocol.
    addedCRC(COM , 6); //Add CRC_16 check for reading wind direction command packet
-   Serial.write(COM, 8); //Send the command of reading the wind direction
+   int retries = 0;
  
    while (!ret) {
-     if (millis() - curr > 1000) {
-       WindDirection = 18; //If the wind direction has not been read for more than 1000 milliseconds, it will be regarded as a timeout and return 18.
+     if (retries>2) {
+       WindDirection = -1; //If the wind direction has not been read for more than 1000 milliseconds, it will be regarded as a timeout and return 18.
        break;
      }
- 
-if (millis() - curr1 > 100) {
-       Serial.write(COM, 8); //If the last command to read the wind direction is sent for more than 100 milliseconds and nothing has been returned, the command to read the wind direction will be re-sent
-       curr1 = millis();
-     }
+	 
+	 Serial.write(COM, 8); //Send the command of reading the wind direction
+	 Serial.flush();
+	 retries++;
  
      if (readN(&ch, 1) == 1) {
        if (ch == B_Address) { //Read and judge the packet header.
@@ -207,9 +201,9 @@ if (millis() - curr1 > 100) {
                if (ch == 0x02) { //Read and judge the packet header.
                  Data[2] = ch;
                  if (readN(&Data[3], 4) == 4) {
-                   if (CRC16_2(Data, 5) == (Data[5] * 256 + Data[6])) { //Check data packet
+                   if (CRC16_2(Data, 5) == ((Data[5] << 8) | Data[6])) { //Check data packet
                      ret = true;
-                     WindDirection = Data[3]*256 + Data[4]; //Calculate the wind direction by dividing by 10.
+                     WindDirection = (Data[3] << 8) | Data[4]; //Calculate the wind direction by dividing by 10.
                    }
                  }
                }
@@ -228,23 +222,20 @@ uint8_t WindFunctions::readAddress()
    uint8_t Data[7] = {0}; //Store the original data packet returned by the sensor
    uint8_t COM[8] = {0x00, 0x03, 0x10, 0x00, 0x00, 0x01, 0x00, 0x00}; //Command for reading wind speed
    boolean ret = false; //Wind speed acquisition success flag
-   long curr = millis();
-   long curr1 = curr;
    uint8_t ch = 0;
    addedCRC(COM , 6); //Add CRC_16 check
-   Serial.write(COM, 8); //Send the command of reading the address
- 
+   int retries = 0;
+   
    while (!ret) {
-     if (millis() - curr > 1000) {
-       Serial.println("Address Read Failed");
+     if (retries>2) {
+       Serial.println("Address Read Failed.");
+	   delay(2000);
        break;
      }
- 
-if (millis() - curr1 > 100) {
-       Serial.write(COM, 8); //If the last command is sent for more than 100 milliseconds and the return has not been received, the command will be re-sent
-       curr1 = millis();
-     }
- 
+	Serial.write(COM, 8); //Send the command of reading the address
+	Serial.flush();
+	retries++;
+
      if (readN(&ch, 1) == 1) {
        if (ch == 0x00) { //Read and judge the packet header.
          Data[0] = ch;
@@ -255,7 +246,7 @@ if (millis() - curr1 > 100) {
                if (ch == 0x02) { //Read and judge the packet header.
                  Data[2] = ch;
                  if (readN(&Data[3], 4) == 4) {
-                   if (CRC16_2(Data, 5) == (Data[5] * 256 + Data[6])) { //Check data packet
+                   if (CRC16_2(Data, 5) == ((Data[5] << 8) | Data[6])) { //Check data packet
                      ret = true;
                      ReadAddr = Data[4]; 
                    }
@@ -280,22 +271,22 @@ boolean WindFunctions::ModifyAddress(uint8_t Address1, uint8_t Address2)
 {
   uint8_t ModifyAddressCOM[11] = {0x00, 0x10, 0x10, 0x00, 0x00, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00};
   boolean ret = false;
-  long curr = millis();
-  long curr1 = curr;
   uint8_t ch = 0;
   ModifyAddressCOM[0] = Address1;
   ModifyAddressCOM[8] = Address2;
   addedCRC(ModifyAddressCOM , 9);
-  Serial.write(ModifyAddressCOM, 11);
+  int retries = 0;
+  
   while (!ret) {
-    if (millis() - curr > 1000) {
+    if (retries>2) {	
+	  Serial.println("Address set failed!");
+	  delay(2000);
       break;
     }
+	Serial.write(ModifyAddressCOM, 11);
+	Serial.flush();
+	retries++;
  
-    if (millis() - curr1 > 100) {
-      Serial.write(ModifyAddressCOM, 11);
-      curr1 = millis();
-    }
  
     if (readN(&ch, 1) == 1) {
       if (ch == Address1) {
@@ -311,7 +302,7 @@ boolean WindFunctions::ModifyAddress(uint8_t Address1, uint8_t Address2)
                           if (ch == 0x01) {
                             while (1) {
                               Serial.println("Please power on the sensor again.");
-                              delay(1000);
+                              delay(2000);
                             }
                             ret = true ;
                           }
